@@ -77,12 +77,12 @@ class DatasetMapperWithSupport:
             if self.few_shot:
                 self.support_df = pd.read_pickle("./datasets/coco/10_shot_support_df.pkl")
             else:
-                self.support_df = pd.read_pickle("./datasets/coco/train_support_df.pkl")
+                self.support_df = pd.read_pickle("./datasets/fsod/train_support_df.pkl")
 
-            metadata = MetadataCatalog.get('coco_2017_train')
+            metadata = MetadataCatalog.get('fsod_train')
             # unmap the category mapping ids for COCO
-            reverse_id_mapper = lambda dataset_id: metadata.thing_dataset_id_to_contiguous_id[dataset_id]  # noqa
-            self.support_df['category_id'] = self.support_df['category_id'].map(reverse_id_mapper)
+            #reverse_id_mapper = lambda dataset_id: metadata.thing_dataset_id_to_contiguous_id[dataset_id]  # noqa
+            #self.support_df['category_id'] = self.support_df['category_id'].map(reverse_id_mapper)
 
 
     def __call__(self, dataset_dict):

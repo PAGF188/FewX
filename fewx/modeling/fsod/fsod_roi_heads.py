@@ -151,7 +151,7 @@ class FsodRes5ROIHeads(ROIHeads):
         full_proposals_ls = [Instances.cat(full_proposals_ls)]
 
         proposal_boxes = [x.proposal_boxes for x in full_proposals_ls]
-        assert len(proposal_boxes[0]) == 2000
+        #assert len(proposal_boxes[0]) == 2000
 
         box_features = self._shared_roi_transform(
             [features[f] for f in self.in_features], proposal_boxes

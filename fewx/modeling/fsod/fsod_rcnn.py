@@ -258,10 +258,10 @@ class FsodRCNN(nn.Module):
 
         support_file_name = os.path.join(support_dir, 'support_feature.pkl')
         if not os.path.exists(support_file_name):
-            support_path = './datasets/coco/10_shot_support_df.pkl'
+            support_path = './datasets/fsod/test_support_df.pkl'
             support_df = pd.read_pickle(support_path)
 
-            metadata = MetadataCatalog.get('coco_2017_train')
+            metadata = MetadataCatalog.get('fsod_eval')
             # unmap the category mapping ids for COCO
             reverse_id_mapper = lambda dataset_id: metadata.thing_dataset_id_to_contiguous_id[dataset_id]  # noqa
             support_df['category_id'] = support_df['category_id'].map(reverse_id_mapper)
@@ -273,7 +273,7 @@ class FsodRCNN(nn.Module):
                 support_box_all = []
 
                 for index, support_img_df in support_cls_df.iterrows():
-                    img_path = os.path.join('./datasets/coco', support_img_df['file_path'])
+                    img_path = os.path.join('./datasets/fsod', support_img_df['file_path'])
                     support_data = utils.read_image(img_path, format='BGR')
                     support_data = torch.as_tensor(np.ascontiguousarray(support_data.transpose(2, 0, 1)))
                     support_data_all.append(support_data)
