@@ -1,8 +1,10 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
+#import pdb
 import logging
 import numpy as np
 import torch
 from torch import nn
+import math
 
 from detectron2.data.detection_utils import convert_image_to_rgb
 from detectron2.structures import ImageList, Boxes, Instances
@@ -101,6 +103,7 @@ class FsodRCNN(nn.Module):
             break  # only visualize one image in a batch
 
     def forward(self, batched_inputs):
+        # También 1 vez por imagen
         """
         Args:
             batched_inputs: a list, batched outputs of :class:`DatasetMapper` .
@@ -124,8 +127,27 @@ class FsodRCNN(nn.Module):
                 "pred_boxes", "pred_classes", "scores", "pred_masks", "pred_keypoints"
         """
         if not self.training:
-            self.init_model()
-            return self.inference(batched_inputs)
+            n_clases = 2
+            assert n_clases>0
+
+            # Obtener lista de id_clases: [0,1,2,3....]
+            metadata = MetadataCatalog.get('fsod_eval')
+            class_list = list(metadata.thing_dataset_id_to_contiguous_id.values())
+
+            # En cada iteración tomamos n_clases de class_list e iniciamos el modelo con ellas
+            # Ejemplo con class_list=[0,1,2,3,4] y n_clases=2
+            # iter1: [0,1];  iter2: [2,3];  iter3: [4]
+
+            aux = []
+            for i in range(math.ceil(len(class_list)/n_clases)):
+                self.init_model(class_list[i*n_clases:i*n_clases+n_clases])
+                aux.append(self.inference(batched_inputs)[0]["instances"])
+            
+            # aux es una lista de predicciones [pred_n_primeras_clases, pred_siguientes, ....]
+            # necesitamos unificarlas todas en 1 solo elemento
+            # -> empleando detectron2.structures.instances.Instances.cat.
+            _predictions = {"instances" : Instances.cat(aux)}
+            return [_predictions]
         
         images, support_images = self.preprocess_image(batched_inputs)
         if "instances" in batched_inputs[0]:
@@ -156,7 +178,7 @@ class FsodRCNN(nn.Module):
         feature_pooled = self.roi_heads.roi_pooling(support_features, support_bboxes_ls)
 
         support_box_features = self.roi_heads._shared_roi_transform([support_features[f] for f in self.in_features], support_bboxes_ls)
-        assert self.support_way == 2 # now only 2 way support
+        #assert self.support_way == 2 # now only 2 way support
 
         detector_loss_cls = []
         detector_loss_box_reg = []
@@ -249,7 +271,7 @@ class FsodRCNN(nn.Module):
         losses.update(proposal_losses)
         return losses
 
-    def init_model(self):
+    def init_model(self, classes_list):
         self.support_on = True #False
 
         support_dir = './support_dir'
@@ -312,10 +334,17 @@ class FsodRCNN(nn.Module):
             with open(support_file_name, "rb") as hFile:
                 self.support_dict  = pickle.load(hFile, encoding="latin1")
             for res_key, res_dict in self.support_dict.items():
+                delete = []
                 for cls_key, feature in res_dict.items():
-                    self.support_dict[res_key][cls_key] = feature.cuda()
+                    if cls_key in classes_list:
+                        self.support_dict[res_key][cls_key] = feature.cuda()
+                    else:
+                        delete.append(cls_key)
+                [self.support_dict[res_key].pop(key) for key in delete] 
+
 
     def inference(self, batched_inputs, detected_instances=None, do_postprocess=True):
+        # Se ejecuta 1 vez por imagen de test
         """
         Run inference on the given inputs.
         Args:
