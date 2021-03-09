@@ -107,6 +107,12 @@ class COCOEvaluator(DatasetEvaluator):
         return tasks
 
     def process(self, inputs, outputs):
+        #Esta es la que me interesa
+        # Se ejecuta 1 vez por imagen. Añade la predicción a self._predictions
+        #IMPORTANTE Ya vienen inputs y outputs en formato (ver comandos.txt).
+        # Traza ejecución: Trainer.test(fsod_train_net.py) -> inference_on_dataset 
+        #(evaluator.py(superclase de coco_evaluator)) -> process
+
         """
         Args:
             inputs: the inputs to a COCO model (e.g., GeneralizedRCNN).
@@ -124,9 +130,11 @@ class COCOEvaluator(DatasetEvaluator):
                 prediction["instances"] = instances_to_coco_json(instances, input["image_id"])
             if "proposals" in output:
                 prediction["proposals"] = output["proposals"].to(self._cpu_device)
+            #print(prediction)
             self._predictions.append(prediction)
 
     def evaluate(self):
+        # Se ejecuta una vez que están todas las predicciones
         if self._distributed:
             comm.synchronize()
             predictions = comm.gather(self._predictions, dst=0)
@@ -156,6 +164,7 @@ class COCOEvaluator(DatasetEvaluator):
         return copy.deepcopy(self._results)
 
     def _eval_predictions(self, tasks, predictions):
+        # Se ejecuta una vez que están todas las predicciones
         """
         Evaluate predictions on the given tasks.
         Fill self._results with the metrics of the tasks.
@@ -243,6 +252,8 @@ class COCOEvaluator(DatasetEvaluator):
         self._results["box_proposals"] = res
 
     def _calculate_ap(self, class_names, precisions, T=None, A=None):
+        #Se ejecuta 1 vez por llamada en _derive_coco_results() [para diferentes iou_thresh (T) y A]
+
         ################## ap #####################
         voc_ls = []
         non_voc_ls = []
@@ -279,6 +290,7 @@ class COCOEvaluator(DatasetEvaluator):
         return voc_ap, non_voc_ap
 
     def _derive_coco_results(self, coco_eval, iou_type, class_names=None):
+        # Se ejecuta una vez que están todas las predicciones)
         """
         Derive the desired score numbers from summarized COCOeval.
 
@@ -386,6 +398,7 @@ class COCOEvaluator(DatasetEvaluator):
         return results
 
 def instances_to_coco_json(instances, img_id):
+    #Se ejecuta 1 vez por imagen
     """
     Dump an "Instances" object to a COCO-format json that's used for evaluation.
 
@@ -561,6 +574,7 @@ def _evaluate_box_proposals(dataset_predictions, coco_api, thresholds=None, area
 
 
 def _evaluate_predictions_on_coco(coco_gt, coco_results, iou_type, kpt_oks_sigmas=None):
+    # 1 vez al tener todas las predicciones
     """
     Evaluate the coco results using COCOEval API.
     """

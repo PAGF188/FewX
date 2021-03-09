@@ -11,7 +11,7 @@ import json
 import shutil
 
 ######################################
-annFile = './annotations/instances_val2017.json'
+annFile = './annotations/instances_val2017.json_reales'
 nclases=5  # con clases 1,2,3.....,200
 #######################################
 
@@ -19,7 +19,7 @@ dump = '{"images": ['
 coco = COCO(annFile)
 
 ann_ids_final = []
-for cat in range(5+1):
+for cat in range(nclases+1):
     ann_ids = coco.getAnnIds(catIds=[cat])
     ann_ids_final = ann_ids_final + ann_ids[:]
 
@@ -42,7 +42,7 @@ dump = dump + str(annotations) + ', "categories": '
 
 dump = dump + str(coco.loadCats(coco.getCatIds(catIds=list(range(1,nclases+1))))) + '}'
 dump = dump.replace('\'',"\"")
-print(dump)
+#print(dump)
 filename = './instances_val2017.json'
 
 with open(filename, "w") as f:

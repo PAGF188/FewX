@@ -11,7 +11,7 @@ import json
 import shutil
 
 ######################################
-annFile = './instances_val2017.json'
+annFile = './annotations/instances_val2017.json'
 shot=5
 #######################################
 dump = '{"images": ['
@@ -26,7 +26,7 @@ for cat in coco.cats:
     ann_ids_final = ann_ids_final + ann_ids[0:shot]
 
 annotations=coco.loadAnns(ids=ann_ids_final)
-
+print(len(annotations))
 #Obtenemos el id de las imágenes de annotations
 img_ids = []
 for i in range(n_classes*shot):
