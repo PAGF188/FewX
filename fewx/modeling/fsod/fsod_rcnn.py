@@ -63,6 +63,21 @@ class FsodRCNN(nn.Module):
         self.support_shot = cfg.INPUT.FS.SUPPORT_SHOT
         self.logger = logging.getLogger(__name__)
 
+        #calculamos número de clases en base al espacio de GPU (solo si ya se genero soporte)
+        # support_file_name = './support_dir/support_feature.pkl'
+        # if os.path.exists(support_file_name):
+        #     device = torch.cuda.current_device()
+        #     avaliable = torch.cuda.get_device_properties(device).total_memory - torch.cuda.memory_reserved(device) 
+            
+        #     with open(support_file_name, "rb") as hFile:
+        #         aux  = pickle.load(hFile, encoding="latin1")
+        #     print(type(aux['res5_avg'][0]))
+        #     tensor_size_1_class = aux['res5_avg'][0].element_size() * aux['res5_avg'][0].nelement()
+        #     tensor_size_1_class += aux['res4_avg'][0].element_size() * aux['res4_avg'][0].nelement()
+        #     size = tensor_size_1_class*1000 + 1101*1000*1000
+        #     print("Size: ", size )
+        #     print(math.floor(avaliable/size))
+
     @property
     def device(self):
         return self.pixel_mean.device
@@ -127,16 +142,17 @@ class FsodRCNN(nn.Module):
                 "pred_boxes", "pred_classes", "scores", "pred_masks", "pred_keypoints"
         """
         if not self.training:
-            n_clases = 2
+
+            n_clases = 80
             assert n_clases>0
 
-            # Obtener lista de id_clases: [0,1,2,3....]
+            # Obtener lista de id_clases: [1,2,3....]
             metadata = MetadataCatalog.get('fsod_eval')
             class_list = list(metadata.thing_dataset_id_to_contiguous_id.values())
 
             # En cada iteración tomamos n_clases de class_list e iniciamos el modelo con ellas
-            # Ejemplo con class_list=[0,1,2,3,4] y n_clases=2
-            # iter1: [0,1];  iter2: [2,3];  iter3: [4]
+            # Ejemplo con class_list=[1,2,3,4,5] y n_clases=2
+            # iter1: [1,2];  iter2: [3,4];  iter3: [5]
 
             aux = []
             for i in range(math.ceil(len(class_list)/n_clases)):
@@ -398,7 +414,7 @@ class FsodRCNN(nn.Module):
             del query_features_res4
 
         results, _ = self.roi_heads.eval_with_support(query_images, query_features, support_proposals_dict, support_box_features_dict)
-        
+        #print(results)
         if do_postprocess:
             return FsodRCNN._postprocess(results, batched_inputs, images.image_sizes)
         else:

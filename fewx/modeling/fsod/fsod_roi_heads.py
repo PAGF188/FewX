@@ -168,7 +168,7 @@ class FsodRes5ROIHeads(ROIHeads):
             pred_class_logits, pred_proposal_deltas = self.box_predictor(query_features, support_box_features)
             full_scores_ls.append(pred_class_logits)
             full_bboxes_ls.append(pred_proposal_deltas)
-            full_cls_ls.append(torch.full_like(pred_class_logits[:, 0].unsqueeze(-1), cls_id).to(torch.int8))
+            full_cls_ls.append(torch.full_like(pred_class_logits[:, 0].unsqueeze(-1), cls_id).to(torch.int16))
             del query_features
             del support_box_features
 
