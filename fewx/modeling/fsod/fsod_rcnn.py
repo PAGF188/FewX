@@ -57,26 +57,12 @@ class FsodRCNN(nn.Module):
         self.register_buffer("pixel_mean", torch.Tensor(cfg.MODEL.PIXEL_MEAN).view(-1, 1, 1))
         self.register_buffer("pixel_std", torch.Tensor(cfg.MODEL.PIXEL_STD).view(-1, 1, 1))
 
-        self.in_features              = cfg.MODEL.ROI_HEADS.IN_FEATURES
+        self.in_features = cfg.MODEL.ROI_HEADS.IN_FEATURES
 
         self.support_way = cfg.INPUT.FS.SUPPORT_WAY
         self.support_shot = cfg.INPUT.FS.SUPPORT_SHOT
         self.logger = logging.getLogger(__name__)
-
-        #calculamos número de clases en base al espacio de GPU (solo si ya se genero soporte)
-        # support_file_name = './support_dir/support_feature.pkl'
-        # if os.path.exists(support_file_name):
-        #     device = torch.cuda.current_device()
-        #     avaliable = torch.cuda.get_device_properties(device).total_memory - torch.cuda.memory_reserved(device) 
-            
-        #     with open(support_file_name, "rb") as hFile:
-        #         aux  = pickle.load(hFile, encoding="latin1")
-        #     print(type(aux['res5_avg'][0]))
-        #     tensor_size_1_class = aux['res5_avg'][0].element_size() * aux['res5_avg'][0].nelement()
-        #     tensor_size_1_class += aux['res4_avg'][0].element_size() * aux['res4_avg'][0].nelement()
-        #     size = tensor_size_1_class*1000 + 1101*1000*1000
-        #     print("Size: ", size )
-        #     print(math.floor(avaliable/size))
+        self.n_clases = 1
 
     @property
     def device(self):
@@ -142,9 +128,26 @@ class FsodRCNN(nn.Module):
                 "pred_boxes", "pred_classes", "scores", "pred_masks", "pred_keypoints"
         """
         if not self.training:
+            
+            ### Estimar nº clases
+            support_file_name = './support_dir/support_feature.pkl'
+            if os.path.exists(support_file_name) and self.n_clases==1:
+                device = torch.cuda.current_device()
+                avaliable = torch.cuda.get_device_properties(device).total_memory - torch.cuda.memory_reserved(device) 
+                #print("Memoria disponieble MiB: ", avaliable/(1024*1024))
+                with open(support_file_name, "rb") as hFile:
+                    aux  = pickle.load(hFile, encoding="latin1")
+                size = aux['res5_avg'][0].element_size() * aux['res5_avg'][0].nelement()
+                size += aux['res4_avg'][0].element_size() * aux['res4_avg'][0].nelement()
+                #print("Memoria ocupada por soporte: ", size)
+                #print("Numero de clases :", math.floor(avaliable/size))
+                self.n_clases = math.floor(avaliable/(size*1000))
+                print("Classes number: ", self.n_clases)
+            ### Fin estimacion 
 
-            n_clases = 80
-            assert n_clases>0
+            #Cambiar n_clases a valor estático si se quiere.
+            #n_clases = self.n_clases
+            n_clases = 101
 
             # Obtener lista de id_clases: [1,2,3....]
             metadata = MetadataCatalog.get('fsod_eval')
